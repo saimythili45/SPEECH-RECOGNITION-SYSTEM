@@ -1,0 +1,50 @@
+import speech_recognition as sr
+from pydub import AudioSegment # Import pydub
+from google.colab import files
+import os
+
+# Initialize the recognizer
+recognizer = sr.Recognizer()
+
+# Upload the audio file
+print("Please upload your audio file.")
+uploaded = files.upload()
+
+# Assuming you uploaded only one file, get the filename
+if not uploaded:
+    print("No file uploaded. Please run the cell again and upload a file.")
+else:
+    audio_path = list(uploaded.keys())[0]
+
+    try:
+        # Attempt to open as WAV
+        with sr.AudioFile(audio_path) as source:
+            audio_data = recognizer.record(source)
+    except ValueError:
+        # If not a WAV, try converting with pydub
+        print("Audio file is not in WAV format. Attempting conversion...")
+        try:
+            audio = AudioSegment.from_file('how-are-you-doing-today-103598 (1).wav')
+            wav_path = "temp_audio.wav" # Temporary file for WAV
+            audio.export(wav_path, format="wav")
+            with sr.AudioFile(wav_path) as source:
+                audio_data = recognizer.record(source)
+            print("Conversion successful.")
+        except Exception as e:
+            print(f"Error converting audio file: {e}")
+            audio_data = None # Set audio_data to None if conversion fails
+
+    if audio_data:
+        try:
+            # Perform speech recognition using Google's Web Speech API
+            text = recognizer.recognize_google(audio_data)
+            print("\nTranscription:", text) 
+
+            # Optional: Clean up the temporary WAV file if it was created
+            if 'wav_path' in locals() and os.path.exists(wav_path):
+                os.remove(wav_path)
+
+        except sr.UnknownValueError:
+            print("Speech Recognition could not understand audio")
+        except sr.RequestError as e:
+            print(f"Could not request results from Google Speech Recognition service; {e}")
